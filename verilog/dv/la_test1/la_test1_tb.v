@@ -27,9 +27,9 @@ module la_test1_tb;
 	wire gpio;
 	wire uart_tx;
 	wire [37:0] mprj_io;
-	wire [15:0] checkbits;
+	wire [1:0] checkbits;
 
-	assign checkbits  = mprj_io[31:16];
+	assign checkbits  = mprj_io[1:0];
 	assign uart_tx = mprj_io[6];
 
 	always #12.5 clock <= (clock === 1'b0);
@@ -140,9 +140,9 @@ module la_test1_tb;
 		$dumpvars(0, la_test1_tb);
 
 		// Repeat cycles of 1000 clock edges as needed to complete testbench
-		repeat (250) begin
+		repeat (50) begin
 			repeat (1000) @(posedge clock);
-			// $display("+1000 cycles");
+			$display("+1000 cycles");
 		end
 		$display("%c[1;31m",27);
 		`ifdef GL
@@ -155,11 +155,17 @@ module la_test1_tb;
 	end
 
 	initial begin
-		wait(checkbits == 16'hAB40);
-		$display("LA Test 1 started");
-		wait(checkbits == 16'hAB41);
-		wait(checkbits == 16'hAB51);
-		$display("LA Test 2 passed");
+
+		wait(checkbits == 2'd0);
+		$display("0");
+		wait(checkbits == 2'd1);
+		$display("1");
+		wait(checkbits == 2'd2);
+		$display("2");
+		wait(checkbits == 2'd3);
+		$display("3");
+		wait(checkbits == 2'd0);
+		$display("Back to 0");
 		#10000;
 		$finish;
 	end
@@ -196,7 +202,7 @@ module la_test1_tb;
 	assign VSS = 1'b0;
 
 	assign mprj_io[3] = 1;  // Force CSB high.
-	assign mprj_io[0] = 0;  // Disable debug mode
+	//assign mprj_io[0] = 0;  // Disable debug mode
 
 	caravel uut (
 		.vddio	  (VDD3V3),

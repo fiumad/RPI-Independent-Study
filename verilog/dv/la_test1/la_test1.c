@@ -118,10 +118,15 @@ void main()
 	reg_la1_oenb = reg_la1_iena = 0x00000000;    
 
 	while (1) {
-		if (reg_la0_data_in > 0x1F4) {
-			reg_mprj_datal = 0xAB410000;
-			break;
-		}
+        reg_la1_data = 0x80000000;
+        for(int i = 0; i < 100; i++);
+        reg_la1_data = 0x00000000;
+        for(int i = 0; i < 100; i++);
+
+		//if (reg_la0_data_in > 0x1F4) {
+		//	reg_mprj_datal = 0xAB410000;
+		//	break;
+		//}
 	}
 	print("\n");
 	print("Monitor: Test 1 Passed\n\n");	// Makes simulation very long!
