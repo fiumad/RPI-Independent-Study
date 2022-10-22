@@ -93,6 +93,7 @@ homegrown_watch mprj (
     .la_data_in(la_data_in),
     .la_data_out(la_data_out),
     .la_oenb (la_oenb),
+    .rst (wb_rst_i),
 
     // IO Pads
 

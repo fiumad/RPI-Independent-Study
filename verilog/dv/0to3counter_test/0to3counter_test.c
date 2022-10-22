@@ -115,7 +115,7 @@ void main()
 	reg_la1_data = 0x00000000;
 
 	// Configure LA probes from [63:32] as inputs to disable counter write
-	reg_la1_oenb = reg_la1_iena = 0x00000000;    
+	//reg_la1_oenb = reg_la1_iena = 0x00000000;    
 
 	while (1) {
         reg_la1_data = 0x80000000;
