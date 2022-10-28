@@ -17,7 +17,7 @@
 
 `timescale 1 ns / 1 ps
 
-module seconds_test_tb;
+module increment_test_tb;
 	reg clock;
 	reg clk;
     reg RSTB;
@@ -26,26 +26,33 @@ module seconds_test_tb;
 	reg power1, power2;
 
 	wire gpio;
-	wire uart_tx;
 	wire [37:0] mprj_io;
-	wire [1:0] checkbits;
+	reg increment_trigger;
+	reg counter_trigger;
+	reg our_reset;
 
-	assign checkbits  = mprj_io[1:0];
-	assign uart_tx = mprj_io[6];
 
 	always #12.5 clock <= (clock === 1'b0);
-	always #1000 clk <= (clk === 1'b0);
+	//always #1000 clk <= (clk === 1'b0);
 	assign mprj_io[11] = clk;
+	assign mprj_io[10] = counter_trigger;
+	assign mprj_io[12] = increment_trigger;
+	assign mprj_io[13] = our_reset;
+
 
 	initial begin
 		clock = 0;
+		clk = 0;
+		counter_trigger = 0;
+		increment_trigger = 0;
+		
 	end
 
 	// assign mprj_io[3] = 1'b1;
 
 	initial begin
-		$dumpfile("seconds_test.vcd");
-		$dumpvars(0, seconds_test_tb);
+		$dumpfile("increment_test.vcd");
+		$dumpvars(0, increment_test_tb);
 
 		// Repeat cycles of 1000 clock edges as needed to complete testbench
 		repeat (100) begin
@@ -64,27 +71,47 @@ module seconds_test_tb;
 
 	initial begin
 
-		wait(checkbits == 2'd0);
-		$display("0");
-		wait(checkbits == 2'd1);
-		$display("1");
-		wait(checkbits == 2'd2);
-		$display("2");
-		wait(checkbits == 2'd3);
-		$display("3");
-		wait(checkbits == 2'd0);
-		$display("Back to 0");
-		#10000;
+		#5000;
+		increment_and_change_mode; //don't increment, change to mode 1
+		#500;
+		increment_and_change_mode; //increment seconds, change to mode 2
+		#500;
+		increment_and_change_mode; //increment minutes, change to mode 3
+		#500;
+		increment_and_change_mode; //increment hours, change to mode 0
+		#1000;
 		$finish;
 	end
 
+	task increment_and_change_mode;
+		begin
+			#100;
+			increment_trigger = 1'b1; //increment seconds
+			#100;
+			increment_trigger = 1'b0;
+			#100;
+			counter_trigger = 1'b1; //change to mode 2
+			#100;
+			counter_trigger = 1'b0;
+		end
+	endtask
 	initial begin
+		RSTB <= 1'b1;
+		#100;
 		RSTB <= 1'b0;
+
 		CSB  <= 1'b1;		// Force CSB high
-		#2000;
+		#200;
 		RSTB <= 1'b1;	    	// Release reset
-		#170000;
+
+		#1700;
 		CSB = 1'b0;		// CSB can be released
+
+		our_reset <= 1'b0;
+		#100;
+		our_reset <= 1'b1;
+		#100;
+		our_reset <= 1'b0;
 	end
 
 	initial begin		// Power-up sequence
@@ -142,7 +169,7 @@ module seconds_test_tb;
 	);
 
 	spiflash #(
-		.FILENAME("la_test1.hex")
+		.FILENAME("increment_test.hex")
 	) spiflash (
 		.csb(flash_csb),
 		.clk(flash_clk),
@@ -152,10 +179,6 @@ module seconds_test_tb;
 		.io3()			// not used
 	);
 
-	// Testbench UART
-	tbuart tbuart (
-		.ser_rx(uart_tx)
-	);
 
 endmodule
 `default_nettype wire

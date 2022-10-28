@@ -77,10 +77,10 @@ void main()
 
         reg_mprj_io_15 = GPIO_MODE_USER_STD_OUTPUT;
         reg_mprj_io_14 = GPIO_MODE_USER_STD_OUTPUT;
-        reg_mprj_io_13 = GPIO_MODE_USER_STD_OUTPUT;
-        reg_mprj_io_12 = GPIO_MODE_USER_STD_OUTPUT;
-        reg_mprj_io_11 = GPIO_MODE_USER_STD_OUTPUT;
-        reg_mprj_io_10 = GPIO_MODE_USER_STD_OUTPUT;
+        reg_mprj_io_13 = GPIO_MODE_USER_STD_INPUT_NOPULL;
+        reg_mprj_io_12 = GPIO_MODE_USER_STD_INPUT_NOPULL;
+        reg_mprj_io_11 = GPIO_MODE_USER_STD_INPUT_NOPULL;
+        reg_mprj_io_10 = GPIO_MODE_USER_STD_INPUT_NOPULL;
         reg_mprj_io_9  = GPIO_MODE_USER_STD_OUTPUT;
         reg_mprj_io_8  = GPIO_MODE_USER_STD_OUTPUT;
         reg_mprj_io_7  = GPIO_MODE_USER_STD_OUTPUT;
