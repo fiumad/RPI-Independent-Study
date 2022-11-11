@@ -19,7 +19,7 @@
 
 module increment_test_tb;
 	reg clock;
-	reg clk;
+	//reg clk;
     reg RSTB;
 	reg CSB;
 
@@ -30,19 +30,20 @@ module increment_test_tb;
 	reg increment_trigger;
 	reg counter_trigger;
 	reg our_reset;
+	wire [17:0] led_output;
+	wire mode_led_output;
 
-
-	always #12.5 clock <= (clock === 1'b0);
+	always #50 clock <= (clock === 1'b0);
 	//always #1000 clk <= (clk === 1'b0);
-	assign mprj_io[11] = clk;
+	assign mprj_io[11] = clock;
 	assign mprj_io[10] = counter_trigger;
 	assign mprj_io[12] = increment_trigger;
 	assign mprj_io[13] = our_reset;
-
-
+	assign led_output = mprj_io[31:14];
+	assign mode_led_output = mprj_io[32];
 	initial begin
 		clock = 0;
-		clk = 0;
+		//clk = 0;
 		counter_trigger = 0;
 		increment_trigger = 0;
 		
@@ -55,7 +56,7 @@ module increment_test_tb;
 		$dumpvars(0, increment_test_tb);
 
 		// Repeat cycles of 1000 clock edges as needed to complete testbench
-		repeat (100) begin
+		repeat (150) begin
 			repeat (1000) @(posedge clock);
 			$display("+1000 cycles");
 		end
@@ -80,7 +81,6 @@ module increment_test_tb;
 		#500;
 		increment_and_change_mode; //increment hours, change to mode 0
 		#1000;
-		$finish;
 	end
 
 	task increment_and_change_mode;

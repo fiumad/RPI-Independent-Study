@@ -88,13 +88,6 @@ homegrown_watch mprj (
 	.vssd1(vssd1),	// User area 1 digital ground
 `endif
 
-    // Logic Analyzer
-
-    .la_data_in(la_data_in),
-    .la_data_out(la_data_out),
-    .la_oenb (la_oenb),
-    .rst (wb_rst_i),
-
     // IO Pads
 
     .io_in (io_in),

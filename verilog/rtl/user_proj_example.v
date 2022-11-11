@@ -35,20 +35,14 @@
  *-------------------------------------------------------------
  */
 
-module homegrown_watch #(
-    parameter BITS = 2 //0 to 3 Counter
-)(
+module homegrown_watch 
+(
 `ifdef USE_POWER_PINS
     inout vccd1,	// User area 1 1.8V supply
     inout vssd1,	// User area 1 digital ground
 `endif
 
     
-    // Logic Analyzer Signals
-    input  [127:0] la_data_in,
-    output [127:0] la_data_out,
-    input  [127:0] la_oenb,
-    input rst,
 
     // IOs
     input  [`MPRJ_IO_PADS-1:0] io_in,
@@ -63,44 +57,6 @@ module homegrown_watch #(
     wire [`MPRJ_IO_PADS-1:0] io_in;
     wire [`MPRJ_IO_PADS-1:0] io_out;
     wire [`MPRJ_IO_PADS-1:0] io_oeb;
-
-    wire [BITS-1:0] count;
-
-    wire counter_trigger;
-    wire inc_demux_trigger;
-
-    // WB MI A
-    //assign valid = wbs_cyc_i && wbs_stb_i; 
-    //assign wstrb = wbs_sel_i & {4{wbs_we_i}};
-    //assign wbs_dat_o = rdata;
-    //assign wdata = wbs_dat_i;
-
-    // IO
-    assign io_out = count;
-    //assign io_oeb = {(`MPRJ_IO_PADS-1){1'b0}};
-    //assign io_oeb = {(`MPRJ_IO_PADS-1){1'b0}};
-    assign io_oeb[10] = 1'b1;
-    assign io_oeb[11] = 1'b1;
-    assign io_oeb[12] = 1'b1;
-    assign io_oeb[13] = 1'b1;
-
-    // IRQ
-    //assign irq = 3'b000;	// Unused
-
-    // LA
-    //assign la_data_out = {{(127-BITS){1'b0}}, count};
-    // Assuming LA probes [63:32] are for controlling the count register  
-    assign counter_trigger = io_in[10];
-    assign clk = io_in[11];
-    assign inc_demux_trigger = io_in[12];
-    assign our_reset = io_in[13];
-
-
-
-    // Assuming LA probes [65:64] are for controlling the count clk & reset  
-    //assign clk = (~la_oenb[64]) ? la_data_in[64]: wb_clk_i;
-    //assign rst = (~la_oenb[65]) ? la_data_in[65]: wb_rst_i;
-
     //carry over signals from one time register to the next
     wire sec_fine_to_sec_coarse;
     wire sec_coarse_to_min_fine;
@@ -120,17 +76,72 @@ module homegrown_watch #(
     wire [11:0] mins_coarse;
     wire [11:0] hours;
 
+    //outputs for clock stepdown
+    wire clk_1Hz;
+    wire clk_1024Hz;
+
+    //output dummy wire for mode processor TODO
+    wire mode_led;
+
+    //output wires for the 6x6 mux
+    wire [5:0] rows6x6;
+    wire [5:0] columns6x6;
+
+    //output wires for the 2x4 mux
+    wire [1:0] row2x4;
+    wire [3:0] columns2x4;
+    wire [1:0] count;
+
+    wire counter_trigger;
+    wire inc_demux_trigger;
+
+    // WB MI A
+    //assign valid = wbs_cyc_i && wbs_stb_i; 
+    //assign wstrb = wbs_sel_i & {4{wbs_we_i}};
+    //assign wbs_dat_o = rdata;
+    //assign wdata = wbs_dat_i;
+
+    // IO
+    assign io_out [19:14] = rows6x6;
+    assign io_out [25:20] = columns6x6;
+    assign io_out [27:26] = row2x4;
+    assign io_out [31:28] = columns2x4;
+    assign io_out [32] = mode_led;
+
+    //assign io_oeb = {(`MPRJ_IO_PADS-1){1'b0}};
+    //assign io_oeb = {(`MPRJ_IO_PADS-1){1'b0}};
+    assign io_oeb[10] = 1'b1;
+    assign io_oeb[11] = 1'b1;
+    assign io_oeb[12] = 1'b1;
+    assign io_oeb[13] = 1'b1;
+    assign io_oeb[32:14] = 19'b0000000000000000000;
+
+    // IRQ
+    //assign irq = 3'b000;	// Unused
+
+    // LA
+    //assign la_data_out = {{(127-BITS){1'b0}}, count};
+    // Assuming LA probes [63:32] are for controlling the count register  
+    assign counter_trigger = io_in[10];
+    assign clk = io_in[11];
+    assign inc_demux_trigger = io_in[12];
+    assign our_reset = io_in[13];
 
 
-    counter #(
-        .BITS(BITS)
-    ) counter(
+
+    // Assuming LA probes [65:64] are for controlling the count clk & reset  
+    //assign clk = (~la_oenb[64]) ? la_data_in[64]: wb_clk_i;
+    //assign rst = (~la_oenb[65]) ? la_data_in[65]: wb_rst_i;
+
+    
+
+    counter zeroto3counter(
         .trigger(counter_trigger), //switch to IO pad later
         .reset(our_reset),
         .count(count)
     );
 
-    inc_demux inc_demux(
+    inc_demux oneto4demux(
         .trigger(inc_demux_trigger), //pass button in here
         .sel(count),
         .inc_secs(inc_secs),
@@ -178,6 +189,38 @@ module homegrown_watch #(
         .s_out()
     );
 
+    slowClock clock_stepdown (
+        .clk(clk),
+        .reset(our_reset),
+        .clk_1Hz(clk_1Hz),
+        .clk_1024Hz(clk_1024Hz)
+    );
+
+    mode_processor mode_LED_processor (
+        .clk(clk_1024Hz),
+        .mode(count),
+        .reset(our_reset),
+        .led(mode_led)
+    );
+
+    output_mux6x6 sixbysix(
+        .hours(hours),
+        .mins_coarse(mins_coarse),
+        .secs_coarse(sec_coarse),
+        .clk(clk_1024Hz),
+        .reset(our_reset),
+        .rows(rows6x6),
+        .columns(columns6x6)
+    );
+
+    output_mux2x4 twobyfour(
+        .mins_fine(mins_fine),
+        .secs_fine(sec_fine),
+        .clk(clk_1024Hz),
+        .reset(our_reset),
+        .row(row2x4),
+        .columns(columns2x4)
+    );
 endmodule
 
 module counter #(
@@ -291,6 +334,204 @@ module inc_demux (
         inc_mins = 1'b0;
         inc_hours = 1'b0;
     end
+endmodule
+
+module slowClock(clk, reset, clk_1Hz, clk_1024Hz);
+input clk, reset;
+output clk_1Hz, clk_1024Hz;
+
+
+reg clk_1Hz = 1'b0;
+reg clk_1024Hz = 1'b0;
+reg [27:0] counter; //Needs to be large enough to fit 80M
+reg [27:0] counter2;
+//parameter num_ticks = 5000000; //Number of clk ticks you want //THIS IS FOR 10MHz
+parameter num_ticks = 5000; //Number of clk ticks you want
+//For 1Hz from an 80MHz clock, num_ticks=40,000,000 aka
+//half of total frequency b/c 50% duty cycle, 1 pos edge 
+//per second.
+parameter num_ticks_2=50;
+
+  always@(negedge reset or posedge clk)
+begin
+    if (reset == 1'b1)
+        begin
+            clk_1Hz <= 0;
+            clk_1024Hz <= 0;
+            counter <= 0;
+            counter2 <= 0;
+        end
+    else
+        begin
+            counter <= counter + 1;
+            counter2 <= counter2 + 1;
+          if (counter2 == num_ticks_2-1)
+              begin
+                   counter2 <= 0;
+                   clk_1024Hz <= ~clk_1024Hz;
+              end
+          if ( counter == num_ticks-1) //minus 1 to account for transistion
+                begin
+                    counter <= 0;
+                    clk_1Hz <= ~clk_1Hz;
+                end
+        end
+end
+endmodule   
+
+module mode_processor(
+  input clk, //1024Hz
+  input [1:0] mode,
+  input reset,
+  output reg led
+);
+
+  reg clk_4Hz = 1'b0;
+  reg [10:0] counter;
+  reg clk_div1;
+  reg clk_div2;
+  reg clk_div4;
+
+  parameter num_ticks = 256;
+always@(posedge reset or posedge clk)
+begin
+    if (reset == 1'b1)
+        begin
+            clk_4Hz <= 0;
+            counter <= 0;
+            clk_div1 <= 0;
+            clk_div2 <= 0;
+            clk_div4 <= 0;
+            led <= 0;
+        end
+    else
+        begin
+            counter <= counter + 1;
+
+          if ( counter == num_ticks-1) //minus 1 to account for transistion
+                begin
+                    counter <= 0;
+                    clk_4Hz <= ~clk_4Hz;
+                end
+        end
+end
+
+  // simple ripple clock divider
+  always @(posedge clk)
+        begin
+          clk_div1 <= clk_4Hz;
+          case(mode)
+                0 : begin
+                    led <= 0;
+                end
+                1 : begin
+                    led <= clk_div4;
+                end
+                2 : begin
+                    led <= clk_div2;
+                end
+                3 : begin
+                    led <= clk_div1;
+                end
+            endcase
+        end
+
+  always @(posedge clk_div1)
+    clk_div2 <= ~clk_div2;
+
+  always @(posedge clk_div2)
+    clk_div4 <= ~clk_div4;
+
+
+endmodule
+
+module output_mux6x6 (
+  input [11:0] hours, 
+  input [11:0] mins_coarse, 
+  input [11:0] secs_coarse,
+  input clk, reset, //clk should be suitable refresh rate for led matrix
+              // should be 6 times the target refresh for a single led
+  
+  output reg [5:0] rows,
+  output reg [5:0] columns
+
+);
+  wire [5:0] row_next;
+  always@(posedge clk, posedge reset)
+    begin 
+      if (reset == 1'b1)
+        rows <= 6'b100000;
+      else
+        rows <= row_next;
+    end
+  //assign r_next = {r_reg[0], r_reg[N-1:1]};
+  assign row_next = {rows[0],rows[5:1]};
+
+  always@(posedge clk)
+    begin 
+      case(rows)
+        6'b000001 : begin //first half of hours
+          columns <= hours[11:6];
+        end
+        6'b100000 : begin
+          columns <= hours[5:0];
+        end
+        6'b010000 : begin
+          columns <= mins_coarse[11:6];
+        end
+        6'b001000 : begin
+          columns <= mins_coarse[5:0];
+        end
+        6'b000100 : begin 
+          columns <= secs_coarse[11:6];
+        end
+        6'b000010 : begin
+          columns <= secs_coarse[5:0];
+        end
+        default : begin
+          columns <= 6'b000000;
+        end
+      endcase
+    end
+  
+  
+endmodule
+
+module output_mux2x4 ( 
+  input [3:0] mins_fine, 
+  input [3:0] secs_fine,
+  input clk, reset, //clk should be suitable refresh rate for led matrix
+              // should be 6 times the target refresh for a single led
+  
+  output reg [1:0] row,
+  output reg [3:0] columns
+
+);
+  wire [1:0] row_next;
+  always@(posedge clk, posedge reset)
+    begin 
+      if (reset == 1'b1)
+        row <= 2'b10;
+      else 
+        row <= row_next;
+    end
+  assign row_next = {row[0],row[1]};
+  always@(posedge clk)
+    begin 
+      case(row)
+        2'b10 : begin //first half of hours
+          columns <= mins_fine[3:0];
+        end
+        2'b01 : begin
+          columns <= secs_fine[3:0];
+        end
+        default : begin
+          columns <= 4'b0000;
+        end
+      endcase
+    end
+  
+  
 endmodule
 
 `default_nettype wire
