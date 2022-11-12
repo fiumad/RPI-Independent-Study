@@ -71,7 +71,7 @@ module increment_test_tb;
 	end
 
 	initial begin
-
+		/*
 		#5000;
 		increment_and_change_mode; //don't increment, change to mode 1
 		#500;
@@ -81,6 +81,7 @@ module increment_test_tb;
 		#500;
 		increment_and_change_mode; //increment hours, change to mode 0
 		#1000;
+		*/
 	end
 
 	task increment_and_change_mode;

@@ -150,7 +150,7 @@ module homegrown_watch
     );
 
     fine_shift_register seconds_fine( 
-        .clk(clk),
+        .clk(clk_1Hz),
         .reset(our_reset),
         .increment(inc_secs),
         .r_reg(sec_fine),
@@ -258,14 +258,15 @@ module fine_shift_register
    begin
       if (reset)
          r_reg <= 4'b0;
+      else if (r_reg[0] == 1'b1)   
+        r_reg <= 4'b0;
       else
          r_reg <= r_next;
-      if (r_reg[0] == 1'b1)   
-        r_reg <= 4'b0;
+      
 	end	
  
 	assign r_next = {1'b1, r_reg[N-1:1]};
-	assign s_out = r_reg[0];
+	assign s_out = ~r_reg[3] & ~reset;
  
  
 endmodule
@@ -284,13 +285,13 @@ module coarse_shift_register
    always @(posedge clk, posedge reset, posedge increment)
    begin
       if (reset)
-         r_reg <= 12'b100000000000;
+         r_reg <= 12'b000000000001;
       else
          r_reg <= r_next;
 	end	
  
 	assign r_next = {r_reg[0], r_reg[N-1:1]};
-	assign s_out = r_reg[0];
+	assign s_out = r_reg[11] & ~reset;
  
  
 endmodule
@@ -346,11 +347,11 @@ reg clk_1024Hz = 1'b0;
 reg [27:0] counter; //Needs to be large enough to fit 80M
 reg [27:0] counter2;
 //parameter num_ticks = 5000000; //Number of clk ticks you want //THIS IS FOR 10MHz
-parameter num_ticks = 5000; //Number of clk ticks you want
+parameter num_ticks = 5; //Number of clk ticks you want
 //For 1Hz from an 80MHz clock, num_ticks=40,000,000 aka
 //half of total frequency b/c 50% duty cycle, 1 pos edge 
 //per second.
-parameter num_ticks_2=50;
+parameter num_ticks_2=2; //4882 for 10MHz
 
   always@(negedge reset or posedge clk)
 begin
@@ -449,7 +450,8 @@ module output_mux6x6 (
   input [11:0] hours, 
   input [11:0] mins_coarse, 
   input [11:0] secs_coarse,
-  input clk, reset, //clk should be suitable refresh rate for led matrix
+  input clk, 
+  input reset, //clk should be suitable refresh rate for led matrix
               // should be 6 times the target refresh for a single led
   
   output reg [5:0] rows,
@@ -500,7 +502,8 @@ endmodule
 module output_mux2x4 ( 
   input [3:0] mins_fine, 
   input [3:0] secs_fine,
-  input clk, reset, //clk should be suitable refresh rate for led matrix
+  input clk, 
+  input reset, //clk should be suitable refresh rate for led matrix
               // should be 6 times the target refresh for a single led
   
   output reg [1:0] row,
