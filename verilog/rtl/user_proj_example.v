@@ -35,7 +35,7 @@
  *-------------------------------------------------------------
  */
 
-module homegrown_watch 
+module user_proj_example 
 (
 `ifdef USE_POWER_PINS
     inout vccd1,	// User area 1 1.8V supply
@@ -149,7 +149,7 @@ module homegrown_watch
         .inc_hours(inc_hours)
     );
 
-    fine_shift_register seconds_fine( 
+    secs_fine_shift_register seconds_fine( 
         .clk(clk_1Hz),
         .reset(our_reset),
         .increment(inc_secs),
@@ -165,11 +165,11 @@ module homegrown_watch
         .s_out(sec_coarse_to_min_fine)
     );
 
-    fine_shift_register minutes_fine( 
+    mins_fine_register minutes_fine( 
         .clk(sec_coarse_to_min_fine),
         .reset(our_reset),
         .increment(inc_mins),
-        .r_reg(mins_fine),
+        .r_reg(mins_fine), 
         .s_out(mins_fine_to_mins_coarse)
     );
     
@@ -214,7 +214,7 @@ module homegrown_watch
     );
 
     output_mux2x4 twobyfour(
-        .mins_fine(mins_fine),
+        .mins_fine(mins_fine), 
         .secs_fine(sec_fine),
         .clk(clk_1024Hz),
         .reset(our_reset),
@@ -243,10 +243,12 @@ module counter #(
 
 endmodule
 
-module fine_shift_register
+module secs_fine_shift_register
    #(parameter N=4)
    (
-    input wire clk, reset, increment,
+    input wire clk, 
+    input reset, 
+    input increment,
     output reg [N-1:0] r_reg,
     output wire s_out
    );
@@ -254,10 +256,10 @@ module fine_shift_register
    wire [N-1:0] r_next;
  
  
-   always @(posedge clk, posedge reset, posedge increment)
+   always @(posedge clk or posedge reset or posedge increment)
    begin
       if (reset)
-         r_reg <= 4'b0;
+         r_reg <= 4'b1000;
       else if (r_reg[0] == 1'b1)   
         r_reg <= 4'b0;
       else
@@ -271,27 +273,72 @@ module fine_shift_register
  
 endmodule
 
-module coarse_shift_register
-    #(parameter N=12)//100000000000, 
+module mins_fine_register 
+   #(parameter N=4)
    (
-    input wire clk, reset, increment,
+    input wire clk, 
+    input wire reset, 
+    input wire increment,
     output reg [N-1:0] r_reg,
     output wire s_out
    );
  
    wire [N-1:0] r_next;
+   reg start;
  
- 
-   always @(posedge clk, posedge reset, posedge increment)
+   //always @(posedge clk or posedge reset or posedge increment)
+   always @(posedge clk or posedge reset)
    begin
       if (reset)
-         r_reg <= 12'b000000000001;
+      begin
+         start <= 1'b1;
+         r_reg <= 4'b0;
+      end
+      else if (r_reg[0] == 1'b1)   
+        r_reg <= 4'b0;
       else
+      begin
          r_reg <= r_next;
+         start <= 1'b0;
+      end
+      
+	end	
+ 
+	assign r_next = {1'b1, r_reg[N-1:1]};
+	assign s_out = ~(r_reg[3] | reset | start);
+
+endmodule
+
+module coarse_shift_register
+    #(parameter N=12)//100000000000, 
+   (
+    input wire clk, 
+    input reset, 
+    input increment, 
+    input sec_fine,
+    output reg [N-1:0] r_reg,
+    output wire s_out
+   );
+ 
+   wire [N-1:0] r_next;
+   reg start;
+ 
+   always @(posedge clk or posedge reset or posedge increment)
+   begin
+      if (reset)
+        begin
+          start <= 1'b1;
+          r_reg <= 12'b100000000000;
+        end
+      else
+      begin
+        start <= 1'b0;
+        r_reg <= r_next;
+      end
 	end	
  
 	assign r_next = {r_reg[0], r_reg[N-1:1]};
-	assign s_out = r_reg[11] & ~reset;
+	assign s_out = r_reg[11] & ~reset & ~start;
  
  
 endmodule
@@ -337,13 +384,16 @@ module inc_demux (
     end
 endmodule
 
-module slowClock(clk, reset, clk_1Hz, clk_1024Hz);
-input clk, reset;
-output clk_1Hz, clk_1024Hz;
+module slowClock(
+input clk, 
+input reset,
+output clk_1Hz, 
+output clk_1024Hz
+);
 
 
-reg clk_1Hz = 1'b0;
-reg clk_1024Hz = 1'b0;
+reg clk_1Hz;
+reg clk_1024Hz;
 reg [27:0] counter; //Needs to be large enough to fit 80M
 reg [27:0] counter2;
 //parameter num_ticks = 5000000; //Number of clk ticks you want //THIS IS FOR 10MHz
@@ -353,9 +403,9 @@ parameter num_ticks = 5; //Number of clk ticks you want
 //per second.
 parameter num_ticks_2=2; //4882 for 10MHz
 
-  always@(negedge reset or posedge clk)
+  always@(posedge clk) //posedge reset
 begin
-    if (reset == 1'b1)
+    if (reset)
         begin
             clk_1Hz <= 0;
             clk_1024Hz <= 0;
@@ -387,7 +437,7 @@ module mode_processor(
   output reg led
 );
 
-  reg clk_4Hz = 1'b0;
+  reg clk_4Hz;
   reg [10:0] counter;
   reg clk_div1;
   reg clk_div2;
@@ -396,7 +446,7 @@ module mode_processor(
   parameter num_ticks = 256;
 always@(posedge reset or posedge clk)
 begin
-    if (reset == 1'b1)
+    if (reset)
         begin
             clk_4Hz <= 0;
             counter <= 0;
@@ -418,26 +468,25 @@ begin
 end
 
   // simple ripple clock divider
-  always @(posedge clk)
+  always @(mode)
         begin
-          clk_div1 <= clk_4Hz;
           case(mode)
                 0 : begin
-                    led <= 0;
+                    led = 0;
                 end
                 1 : begin
-                    led <= clk_div4;
+                    led = clk_div4;
                 end
                 2 : begin
-                    led <= clk_div2;
+                    led = clk_div2;
                 end
                 3 : begin
-                    led <= clk_div1;
+                    led = clk_4Hz;
                 end
             endcase
         end
 
-  always @(posedge clk_div1)
+  always @(posedge clk_4Hz)
     clk_div2 <= ~clk_div2;
 
   always @(posedge clk_div2)
@@ -462,7 +511,10 @@ module output_mux6x6 (
   always@(posedge clk, posedge reset)
     begin 
       if (reset == 1'b1)
+      begin
         rows <= 6'b100000;
+        columns <= 6'b000000;
+      end
       else
         rows <= row_next;
     end
@@ -514,7 +566,10 @@ module output_mux2x4 (
   always@(posedge clk, posedge reset)
     begin 
       if (reset == 1'b1)
+      begin
         row <= 2'b10;
+        columns <= 4'b0000;
+      end
       else 
         row <= row_next;
     end
