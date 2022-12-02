@@ -29,6 +29,7 @@ set ::env(DESIGN_IS_CORE) 0
 set ::env(CLOCK_PORT) ""
 set ::env(CLOCK_NET) "mprj.clk"
 set ::env(CLOCK_PERIOD) "10"
+set ::env(BASE_SDC_FILE) [glob $::env(DESIGN_DIR)/base.sdc]
 
 set ::env(FP_SIZING) absolute
 set ::env(DIE_AREA) "0 0 900 600"
