@@ -227,37 +227,39 @@ module user_proj_example
         .row(row2x4),
         .columns(columns2x4)
     );
-  pos_edge_detect button_processor(
-    .button1(counter_trigger),
-    .button2(inc_demux_trigger),
+  pos_edge_detect mode_button_processor(
+    .button(counter_trigger),
     .clk(clk_1024Hz),
-    .pulse_chg_mode(change_mode),
-    .pulse_increment(increment_demux)
+    .reset(our_reset),
+    .pulse(change_mode)
   );
 
+  pos_edge_detect increment_button_processor(
+    .button(inc_demux_trigger),
+    .clk(clk_1024Hz),
+    .reset(our_reset),
+    .pulse(increment_demux)
+  );
 endmodule
 
 module pos_edge_detect (
-  input button1, //change mode button
-  input button2, //increment button
+  input button, //change mode button
   input clk,
-  output wire pulse_chg_mode,
-  output wire pulse_increment
+  input reset,
+  output wire pulse
 );
-  reg b1_dly;
-  reg b1_dly2;
-  reg b2_dly;
-  reg b2_dly2;
+  reg [63:0] delay;
 
-  always @(posedge clk)
+  always @(posedge clk or posedge reset)
     begin
-      b1_dly <= button1;
-      b2_dly <= button2;
-      b1_dly2 <= b1_dly;
-      b2_dly2 <= b2_dly;
+      if (reset)
+        delay <= 64'b0;
+      else
+        delay <= {delay[62:0], button}; //r_reg[0], r_reg[N-1:1]  
     end
-  assign pulse_chg_mode = button1 & ~b1_dly;
-  assign pulse_increment = button2 & ~b2_dly;
+  //assign pulse = (delay[62:0] == 63'h7FFFFFFFFFFFFFFF) ? ~delay[63] : 1'b0;
+    assign pulse = (delay[62:0] == {63{1'b1}}) ? ~delay[63] : 1'b0;  
+
   
 endmodule
 
@@ -602,12 +604,13 @@ reg         clk_1024Hz;
 reg [27:0]  counter;        //Needs to be large enough to fit 80M
 reg [27:0]  counter2;
 
-//parameter num_ticks = 5000000; //Number of clk ticks you want //THIS IS FOR 10MHz
-parameter num_ticks = 5; //Number of clk ticks you want
+parameter num_ticks = 5000000; //Number of clk ticks you want //THIS IS FOR 10MHz
+//parameter num_ticks = 5; //Number of clk ticks you want
 // For 1Hz from an 80MHz clock, num_ticks=40,000,000 aka
 // half of total frequency b/c 50% duty cycle, 1 pos edge 
 // per second.
-parameter num_ticks_2 = 2; //4882 for 10MHz
+//parameter num_ticks_2 = 2; //4882 for 10MHz
+parameter num_ticks_2 = 4882; //4882 for 10MHz
 
 wire clk_1024Hz_flip    = (counter2 == (num_ticks_2 - 1));
 wire clk_1Hz_flip       = (counter == (num_ticks-1));

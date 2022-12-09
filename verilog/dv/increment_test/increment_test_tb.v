@@ -87,11 +87,27 @@ module increment_test_tb;
 		begin
 			#1000;
 			increment_trigger = 1'b1; //increment seconds
-			#1000;
+			#10;
 			increment_trigger = 1'b0;
-			#1000;
+			#10;
+			increment_trigger = 1'b1;
+			#10;
+			increment_trigger = 1'b0;
+			#10;
+			increment_trigger = 1'b1;
+			#60000;
+			increment_trigger = 1'b0; // long press
+			#10;
+			increment_trigger = 1'b1;
+			#10;
+			increment_trigger = 1'b0;
+			#10;
+			increment_trigger = 1'b1;
+			#10;
+			increment_trigger = 1'b0;
+			#10;
 			counter_trigger = 1'b1; //change to mode 2
-			#1000;
+			#10;
 			counter_trigger = 1'b0;
 		end
 	endtask
