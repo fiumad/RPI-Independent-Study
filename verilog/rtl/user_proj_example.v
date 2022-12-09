@@ -93,7 +93,10 @@ module user_proj_example
     wire [1:0] count;
 
     wire counter_trigger;
-    wire inc_demux_trigger;
+    wire inc_demux_trigger; 
+    wire change_mode; //this is for the positive edge detect module
+    wire increment_demux; //this is for the positive edge detect module
+
 
     // WB MI A
     //assign valid = wbs_cyc_i && wbs_stb_i; 
@@ -134,16 +137,17 @@ module user_proj_example
     //assign rst = (~la_oenb[65]) ? la_data_in[65]: wb_rst_i;
 
     
-
+    
     button_counter zeroto3counter(
       .clk(clk_1024Hz),
-    	.trigger(counter_trigger), //Button input counter_trigger (use clk to test)
+    	.trigger(change_mode), //Button input counter_trigger (use clk to test)
     	.reset(our_reset),  //our_reset
       .counter(count)
     );
   
   inc_demux oneto4demux(
-        .trigger(inc_demux_trigger), //Button input inc_demux_trigger
+        .clk(clk_1024Hz),
+        .trigger(increment_demux), //Button input inc_demux_trigger
         .sel(count), //count
         .reset(our_reset),
         .inc_secs(inc_sec),
@@ -162,7 +166,7 @@ module user_proj_example
   coarse_shift_register seconds_coarse( 
       .clk(sec_fine_to_sec_coarse),
       .reset(our_reset),  //our_reset
-      .increment(1'b0),
+      .increment(inc_min),
       .r_reg(sec_coarse),
       .s_out(sec_coarse_to_min_fine)
     );
@@ -170,21 +174,21 @@ module user_proj_example
   fine_shift_register minutes_fine( 
       .clk(sec_coarse_to_min_fine),
       .reset(our_reset),   //our_reset
-      .increment(inc_min),
+      .increment(1'b0),
       .r_reg(min_fine),
       .s_out(min_fine_to_min_coarse)
     );
   coarse_shift_register minutes_coarse( 
       .clk(min_fine_to_min_coarse),
       .reset(our_reset),   //our_reset
-      .increment(1'b0),
+      .increment(inc_hour),
       .r_reg(min_coarse),
       .s_out(min_coarse_to_hours)
       );
   coarse_shift_register hrs(
       .clk(min_coarse_to_hours),
       .reset(our_reset),  //our_reset
-      .increment(inc_hour),
+      .increment(1'b0),
       .r_reg(hours),
       .s_out(hours_dummy)
       );
@@ -195,7 +199,7 @@ module user_proj_example
         .reset(our_reset),  //our_reset
         .led(mode_led)
     );
-  
+
   slowClock clock_stepdown (
         .clk(clk),
         .reset(our_reset), //our_reset
@@ -204,6 +208,7 @@ module user_proj_example
         .clk_1024Hz(clk_1024Hz)
     );
   
+
   output_mux6x6 sixbysix(
         .hours(hours),
         .mins_coarse(min_coarse),
@@ -222,6 +227,37 @@ module user_proj_example
         .row(row2x4),
         .columns(columns2x4)
     );
+  pos_edge_detect button_processor(
+    .button1(counter_trigger),
+    .button2(inc_demux_trigger),
+    .clk(clk_1024Hz),
+    .pulse_chg_mode(change_mode),
+    .pulse_increment(increment_demux)
+  );
+
+endmodule
+
+module pos_edge_detect (
+  input button1, //change mode button
+  input button2, //increment button
+  input clk,
+  output wire pulse_chg_mode,
+  output wire pulse_increment
+);
+  reg b1_dly;
+  reg b1_dly2;
+  reg b2_dly;
+  reg b2_dly2;
+
+  always @(posedge clk)
+    begin
+      b1_dly <= button1;
+      b2_dly <= button2;
+      b1_dly2 <= b1_dly;
+      b2_dly2 <= b2_dly;
+    end
+  assign pulse_chg_mode = button1 & ~b1_dly;
+  assign pulse_increment = button2 & ~b2_dly;
   
 endmodule
 
@@ -241,7 +277,7 @@ module fine_shift_register
    reg start;
    
  
-  always @(posedge clk or posedge reset or posedge increment)
+  always @(posedge clk or posedge reset) // or posedge increment
    begin
       if (reset)
 	      begin
@@ -260,7 +296,7 @@ module fine_shift_register
  
   assign r_next = {1'b1, r_reg[N-1:1]};
   
-  assign s_out = ~r_reg[3] & ~reset & start;
+  assign s_out = (~r_reg[3] & ~reset & start) | increment;
   
 
 endmodule
@@ -280,7 +316,7 @@ module coarse_shift_register
    wire [N-1:0] r_next;
    reg start;
  
-  always @(posedge clk or posedge reset or posedge increment)
+  always @(posedge clk or posedge reset) // or posedge increment
    begin
       if (reset)
         begin
@@ -295,7 +331,7 @@ module coarse_shift_register
 	end	
  
   assign r_next = {r_reg[0], r_reg[N-1:1]};
-  assign s_out = r_reg[11] & ~reset & start;
+  assign s_out = (r_reg[11] & ~reset & start) | increment;
  
 endmodule
 
@@ -311,12 +347,13 @@ module button_counter
   );
     //reg [BITS-1:0] count;
     reg pressed;
-    reg [5:0] delay;
+    //reg [5:0] delay;
+    /*
   always @(posedge reset or posedge clk) 
       begin
         if(reset)
           begin
-          delay <= 6'b0;
+          //delay <= 6'b0;
           counter <= 0;
           pressed <= 0;
           end
@@ -327,8 +364,8 @@ module button_counter
               pressed <= 1'b1;
               counter <= counter+1;
               end
-            else
-              delay <= delay + 1;
+            
+          //delay <= delay + 1;
           end
         else if (delay == 6'b111111)
           begin
@@ -336,7 +373,32 @@ module button_counter
             pressed <= 1'b0;
           end
       end
-  
+      */
+      always @(posedge reset or posedge clk)
+        begin
+          if (reset)
+            begin
+              counter <= 0;
+              pressed <= 0;
+            end
+          else if (trigger)
+            begin
+              if (pressed == 1'b0)
+                begin
+                  pressed <= 1'b1;
+                end
+            end
+          else
+            begin
+              if (pressed == 1'b1)
+                begin
+                  counter <= counter + 1;
+                  pressed <= 1'b0;
+                end
+            end
+            
+        end
+
 endmodule
 
 
@@ -350,6 +412,8 @@ module inc_demux (
     output reg inc_mins,
     output reg inc_hours
 );
+  
+  /*
   reg pressed;
   reg [5:0] delay;
   always @(posedge clk or posedge reset)
@@ -403,6 +467,61 @@ module inc_demux (
           end
           
     end
+  */
+  reg pressed;
+  always @(posedge clk or posedge reset)
+  begin
+    if (reset)
+      begin
+        pressed <= 0;
+        inc_secs <= 1'b0;
+        inc_mins <= 1'b0;
+        inc_hours <= 1'b0;
+      end
+    else if (trigger)
+      begin
+        if(pressed == 1'b0)
+          begin
+            pressed <= 1'b1;
+          end
+      end
+    else
+      begin
+        if (pressed == 1'b1)
+          begin
+            case(sel)
+                2'b00 : begin
+                    inc_secs <= 1'b0;
+                    inc_mins <= 1'b0;
+                    inc_hours <= 1'b0;
+                end
+                2'b01 : begin
+                    inc_secs <= 1'b1;
+                    inc_mins <= 1'b0;
+                    inc_hours <= 1'b0;
+                end
+                2'b10 : begin
+                    inc_secs <= 1'b0;
+                    inc_mins <= 1'b1;
+                    inc_hours <= 1'b0;
+                end
+                2'b11 : begin
+                    inc_secs <= 1'b0;
+                    inc_mins <= 1'b0;
+                    inc_hours <= 1'b1;
+                end
+              endcase
+              pressed = 1'b0;
+          end
+        else
+          begin
+            inc_secs <= 1'b0; 
+            inc_mins <= 1'b0;
+            inc_hours <= 1'b0;
+          end
+      end
+
+  end
 
 endmodule
 
@@ -461,14 +580,11 @@ module mode_processor(
         else
             clk_div2 <= ~clk_div2;
 
-
     always @(posedge clk_div2 or posedge reset) 
         if (reset)
             clk_div4 <= 1'b0;
         else
             clk_div4 <= ~clk_div4;
-
-
 
 endmodule
 
@@ -519,7 +635,7 @@ always @(posedge clk or posedge reset)
         clk_1024Hz <= ~clk_1024Hz;
 
 always @(posedge clk or posedge reset)
-    if(reset || mode >= 2'b00)
+    if(reset) //|| mode >= 2
         clk_1Hz <= 0;
     else if(clk_1Hz_flip)
         clk_1Hz <= ~clk_1Hz;

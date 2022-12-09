@@ -54,7 +54,6 @@ module increment_test_tb;
 	initial begin
 		$dumpfile("increment_test.vcd");
 		$dumpvars(0, increment_test_tb);
-
 		// Repeat cycles of 1000 clock edges as needed to complete testbench
 		repeat (150) begin
 			repeat (1000) @(posedge clock);
@@ -71,28 +70,28 @@ module increment_test_tb;
 	end
 
 	initial begin
-		/*
-		#5000;
+		
+		#2000;
 		increment_and_change_mode; //don't increment, change to mode 1
-		#500;
+		#5000;
 		increment_and_change_mode; //increment seconds, change to mode 2
-		#500;
+		#5000;
 		increment_and_change_mode; //increment minutes, change to mode 3
-		#500;
+		#5000;
 		increment_and_change_mode; //increment hours, change to mode 0
 		#1000;
-		*/
+		
 	end
 
 	task increment_and_change_mode;
 		begin
-			#100;
+			#1000;
 			increment_trigger = 1'b1; //increment seconds
-			#100;
+			#1000;
 			increment_trigger = 1'b0;
-			#100;
+			#1000;
 			counter_trigger = 1'b1; //change to mode 2
-			#100;
+			#1000;
 			counter_trigger = 1'b0;
 		end
 	endtask
