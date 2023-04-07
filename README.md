@@ -32,7 +32,7 @@ Hayden Fuller - fulleh@rpi.edu
 
 ### Awards
 
-Nico Altimare was awarded the 2023 Analog Devices Outstanding Student Designer Award for his work on RPIce and his exemplary academic performance.
+Nico Altomare recieved recieved the 2023 Analog Devices Outstanding Student Designer Award for his work on RPIce and his exemplary academic performance.
 
 https://ecse.rpi.edu/news/ecse-co-term-student-wins-2023-analog-devices-outstanding-student-designer-award
 
