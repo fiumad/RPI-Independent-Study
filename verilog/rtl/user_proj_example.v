@@ -242,6 +242,8 @@ module user_proj_example
   );
 endmodule
 
+ // This module detects the positive edge of the input signal, button, and generates a pulse output when a positive edge is detected.
+ //  It uses a 64-bit shift register, delay, to store the history of the input signal.
 module pos_edge_detect (
   input button, //change mode button
   input clk,
@@ -259,12 +261,11 @@ module pos_edge_detect (
     end
   //assign pulse = (delay[62:0] == 63'h7FFFFFFFFFFFFFFF) ? ~delay[63] : 1'b0;
     assign pulse = (delay[62:0] == {63{1'b1}}) ? ~delay[63] : 1'b0;  
-
-  
 endmodule
 
 
-
+// A shift register that can increment its internal register, r_reg, based on the input signal, increment. 
+// The output, s_out, is used to signal when the shift register has reached a specific state.
 module fine_shift_register
    #(parameter N=4)
    (
@@ -304,7 +305,8 @@ module fine_shift_register
 endmodule
 
 
-
+// A similar shift register to the fine_shift_register but with a different parameter, N, for its internal register size. 
+//This module also increments its internal register based on the input signal, increment, and provides an output, s_out, signaling when the shift register has reached a specific state.
 module coarse_shift_register
   #(parameter N=12)//100000000000, 
    (
@@ -338,7 +340,8 @@ module coarse_shift_register
 endmodule
 
 
-
+// A counter that increments its internal counter whenever the trigger input signal changes from low to high. 
+// The counter is reset when the reset input signal goes high.
 module button_counter 
   #(parameter BITS = 2)
   (
@@ -350,126 +353,7 @@ module button_counter
     //reg [BITS-1:0] count;
     reg pressed;
     //reg [5:0] delay;
-    /*
-  always @(posedge reset or posedge clk) 
-      begin
-        if(reset)
-          begin
-          //delay <= 6'b0;
-          counter <= 0;
-          pressed <= 0;
-          end
-        else if (trigger)
-          begin
-            if(pressed == 1'b0)
-              begin
-              pressed <= 1'b1;
-              counter <= counter+1;
-              end
-            
-          //delay <= delay + 1;
-          end
-        else if (delay == 6'b111111)
-          begin
-            delay <= 6'b0;
-            pressed <= 1'b0;
-          end
-      end
-      */
-      always @(posedge reset or posedge clk)
-        begin
-          if (reset)
-            begin
-              counter <= 0;
-              pressed <= 0;
-            end
-          else if (trigger)
-            begin
-              if (pressed == 1'b0)
-                begin
-                  pressed <= 1'b1;
-                end
-            end
-          else
-            begin
-              if (pressed == 1'b1)
-                begin
-                  counter <= counter + 1;
-                  pressed <= 1'b0;
-                end
-            end
-            
-        end
 
-endmodule
-
-
-
-module inc_demux (
-    input wire trigger,
-    input wire clk,
-    input [1:0] sel,  //mode 0 = nothing, mode 1 = hours, mode 2 = mins, mode 3 = secs
-    input wire reset,
-    output reg inc_secs,
-    output reg inc_mins,
-    output reg inc_hours
-);
-  
-  /*
-  reg pressed;
-  reg [5:0] delay;
-  always @(posedge clk or posedge reset)
-    begin
-      if (reset)
-      begin
-        pressed <= 0;
-        delay <= 6'b0;
-        inc_secs <= 1'b0;
-        inc_mins <= 1'b0;
-        inc_hours <= 1'b0;
-      end
-      else if (trigger)
-          begin
-            if(pressed == 1'b0)
-              begin
-              pressed <= 1'b1;
-              case(sel)
-                2'b00 : begin
-                    inc_secs <= 1'b0;
-                    inc_mins <= 1'b0;
-                    inc_hours <= 1'b0;
-                end
-                2'b01 : begin
-                    inc_secs <= 1'b1;
-                    inc_mins <= 1'b0;
-                    inc_hours <= 1'b0;
-                end
-                2'b10 : begin
-                    inc_secs <= 1'b0;
-                    inc_mins <= 1'b1;
-                    inc_hours <= 1'b0;
-                end
-                2'b11 : begin
-                    inc_secs <= 1'b0;
-                    inc_mins <= 1'b0;
-                    inc_hours <= 1'b1;
-                end
-              endcase
-              end
-            else
-              delay <= delay + 1;
-            end
-        else if (delay == 6'b111111)
-          begin
-            delay <= 6'b0;
-            pressed <= 1'b0;
-            inc_secs <= 1'b0;
-            inc_mins <= 1'b0;
-            inc_hours <= 1'b0;
-          end
-          
-    end
-  */
   reg pressed;
   always @(posedge clk or posedge reset)
   begin
@@ -528,7 +412,7 @@ module inc_demux (
 endmodule
 
 
-
+//This module generates a clock signal with different frequencies based on the input mode. The output signal, led, is driven according to the selected mode.
 module mode_processor(
     input clk, //1024Hz
     input [1:0] mode,
@@ -590,7 +474,8 @@ module mode_processor(
 
 endmodule
 
-
+// This module divides the input clk frequency to generate two slower clock signals, clk_1Hz and clk_1024Hz.
+// The division factor is determined by the parameters num_ticks and num_ticks_2
 module slowClock(
     input clk, 
     input reset,
@@ -647,7 +532,8 @@ endmodule
 
 
 
-
+// A 6x6 output multiplexer that selects the appropriate row
+// and column signals based on the input signals hours, mins_coarse, and secs_coarse.
 module output_mux6x6 (
   input [11:0] hours, 
   input [11:0] mins_coarse, 
@@ -699,7 +585,8 @@ module output_mux6x6 (
 endmodule
 
 
-
+//A 2x4 output multiplexer that selects the appropriate row 
+//and column signals based on the input signals mins_fine and secs_fine.
 module output_mux2x4 ( 
   input [3:0] mins_fine, 
   input [3:0] secs_fine,
