@@ -30,5 +30,11 @@ Abdul Muizz - muizza@rpi.edu
 
 Hayden Fuller - fulleh@rpi.edu
 
+### Awards
+
+Nico Altomare recieved the 2023 Analog Devices Outstanding Student Designer Award for his work on RPIce and his exemplary academic performance.
+
+https://ecse.rpi.edu/news/ecse-co-term-student-wins-2023-analog-devices-outstanding-student-designer-award
+
 ### Thank You
 We would like to thank Efabless for their help and collaboration on this project, as well as NYDesign for providing us with resources and funding to access Efabless services. Thank you!

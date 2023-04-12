@@ -33,6 +33,9 @@ module user_project_wrapper #(
     parameter BITS = 32
 ) (
 `ifdef USE_POWER_PINS
+//`ifdef is a preprocessor directive in Verilog that checks whether a macro is defined or not. If the macro is defined, 
+// the statements within the ifdef block are included in the code during compilation; otherwise, the statements are excluded.
+
     inout vdda1,	// User area 1 3.3V supply
     inout vdda2,	// User area 2 3.3V supply
     inout vssa1,	// User area 1 analog ground
@@ -41,9 +44,13 @@ module user_project_wrapper #(
     inout vccd2,	// User area 2 1.8v supply
     inout vssd1,	// User area 1 digital ground
     inout vssd2,	// User area 2 digital ground
+    
 `endif
 
     // Wishbone Slave ports (WB MI A)
+    // Wishbone Slave ports: These signals are used to interface with the Wishbone bus, 
+    // a popular on-chip bus architecture for interconnecting IP cores. 
+    // These signals include clock, reset, strobe, cycle, write enable, select, data input, address input, acknowledge, and data output.
     input wb_clk_i,
     input wb_rst_i,
     input wbs_stb_i,
@@ -55,12 +62,16 @@ module user_project_wrapper #(
     output wbs_ack_o,
     output [31:0] wbs_dat_o,
 
+
     // Logic Analyzer Signals
+    // Logic Analyzer Signals: These signals are used to interface with a logic analyzer for debugging purposes.
+    // The logic analyzer can capture and display the values of the signals at runtime.
     input  [127:0] la_data_in,
     output [127:0] la_data_out,
     input  [127:0] la_oenb,
 
     // IOs
+    // IOs: These signals are general-purpose input/output signals, which can be used for various purposes in the user's design.
     input  [`MPRJ_IO_PADS-1:0] io_in,
     output [`MPRJ_IO_PADS-1:0] io_out,
     output [`MPRJ_IO_PADS-1:0] io_oeb,
@@ -72,9 +83,11 @@ module user_project_wrapper #(
     inout [`MPRJ_IO_PADS-10:0] analog_io,
 
     // Independent clock (on independent integer divider)
+    // The user_clock2 input signal is an independent clock connected to an integer divider.
     input   user_clock2,
 
     // User maskable interrupt signals
+    // These signals can be used to generate interrupts for the user's design.
     output [2:0] user_irq
 );
 
